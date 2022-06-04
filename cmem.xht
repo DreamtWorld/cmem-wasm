@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+<meta charset='UTF-8' />
+<title>cmem-wasm debug</title>
+	<script>
+		window.cmem = null;
+		fetch('out/cmem.wasm').then(response =>
+			response.arrayBuffer()
+		).then(buffer =>
+		{
+			cmem = new WebAssembly.Instance(new WebAssembly.Module(buffer)).exports;
+			console.log("cmem-wasm ready");
+		}, error => console.error(error));
+	</script>
+</head>
+<body></body>
+</html>
