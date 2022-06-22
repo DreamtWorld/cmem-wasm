@@ -40,6 +40,7 @@
 
 	(memory (export "memory") 1)
 	(global $begin (mut i32) (i32.const 0))
+	(global $last (mut i32) (i32.const 0))
 
 	;; List
 	;; ====
@@ -108,7 +109,7 @@
 		(local.set $list (global.get $begin))
 		(local.set $best_prev (local.tee $best_len (i32.const 0xFFFF)))
 
-		loop $iter (result i32)
+		loop $iter
 			(local.set $gap_len (call $list_gap (local.get $list)))
 			;; Check if header fits
 			(i32.ge_u (local.get $gap_len) (i32.const 8))
@@ -130,7 +131,7 @@
 			(i32.eqz (call $list_next (local.get $list)))
 			(i32.eq (local.get $best_len) (local.get $len))
 			i32.or
-			if (result i32)
+			if
 				;; Grow memory if necessary
 				(i32.eq (local.get $best_prev) (i32.const 0xFFFF))
 				if
@@ -144,12 +145,19 @@
 					(local.set $best_prev (local.get $list))
 				end
 				(call $list_push (local.get $best_prev) (local.get $len))
+				;; Update last block
+				local.tee $list
+				global.get $last
+				i32.gt_u
+				if
+					(global.set $last (local.get $list))
+				end
 			else
 				(local.set $list (call $list_next (local.get $list)))
 				br $iter
 			end
 		end
-		(i32.add (i32.const 8))
+		(i32.add (local.get $list) (i32.const 8))
 	)
 
 	(func FUNC(calloc) (param $count i32) (param $len i32) (result i32) (local $addr i32)
@@ -167,8 +175,13 @@
 
 	(func FUNC(free) (param $addr i32)
 		(if (i32.eqz (local.get $addr)) (then return))
-		(i32.sub (local.get $addr) (i32.const 8))
+		(local.tee $addr (i32.sub (local.get $addr) (i32.const 8)))
 		call $list_rem
+		(i32.eq (local.get $addr) (global.get $last))
+		if
+			(i32.load (i32.add (local.get $addr) (i32.const 4)))
+			global.set $last
+		end
 	)
 
 	(func FUNC(realloc) (param $list i32) (param $len i32) (result i32) (local $curlen i32) (local $newaddr i32)
@@ -209,10 +222,14 @@
 					(local.get $curlen)
 				)
 				drop
+				(i32.eq (local.get $list) (global.get $last))
+				if
+					(global.set $last (local.get $newaddr))
+				end
 				local.get $newaddr
 			else
 				(call $malloc (local.get $len))
-				(call $list_rem (local.get $list))
+				(call $free (i32.add (local.get $list) (i32.const 8)))
 				(i32.add (local.get $list) (i32.const 8))
 				local.get $curlen
 				call $memmove
@@ -311,16 +328,10 @@
 		(i32.store (i32.add (global.get $begin) (i32.const 4)) (i32.const 0xFFFF))
 	)
 
-	(func EXPORT(end) (result i32) (local $list i32) (local $next i32)
-		(local.set $next (global.get $begin))
-		loop $iter
-			(local.tee $list (local.get $next))
-			(local.tee $next (call $list_next))
-			br_if $iter
-		end
-		local.get $list
+	(func EXPORT(end) (result i32)
+		global.get $last
 		i32.const 8
-		(call $list_get (local.get $list))
+		(call $list_get (global.get $last))
 		(i32.add (i32.add))
 	)
 )

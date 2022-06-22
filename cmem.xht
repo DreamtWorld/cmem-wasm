@@ -227,6 +227,7 @@
 				// end
 				reset();
 				let len = 8;
+				check(cmem.end() === len);
 				ptr1 = cmem.malloc(8);
 				len += 8 + 8;
 				check(cmem.end() === len);
@@ -241,6 +242,17 @@
 				cmem.free(ptr1);
 				len -= 8 + 16;
 				check(cmem.end() === len);
+
+				reset();
+				ptr1 = cmem.malloc(8);
+				ptr2 = cmem.malloc(8);
+				cmem.malloc(8);
+				check(cmem.end() === 56)
+				cmem.free(ptr1);
+				cmem.realloc(ptr2, 24);
+				check(cmem.end() === 56)
+				cmem.realloc(ptr2, 32);
+				check(cmem.end() === 96)
 
 				console.log(totalCount - failCount, "/", totalCount, "tests succeeded");
 			}
