@@ -3,16 +3,259 @@
 <head>
 <meta charset='UTF-8' />
 <title>cmem-wasm debug</title>
-	<script>
+	<script>//<![CDATA[
+		window.cmemMod = null;
 		window.cmem = null;
+		window.view = null;
+
+		let test;
+
+		function reset(skipInit)
+		{
+			cmem = new WebAssembly.Instance(cmemMod).exports
+			view = new Uint8Array(cmem.memory.buffer);
+			if (!skipInit) cmem.init(0);
+		}
+
+		(() => {
+			let failCount = 0;
+			let totalCount = 0;
+
+			function check(cond)
+			{
+				if (!cond)
+				{
+					console.error("Test failure");
+					++failCount;
+				}
+				++totalCount;
+			}
+
+			function checkMem(expected)
+			{
+				if (!Uint8Array.from(expected).every((value, i) => value === view[i]))
+				{
+					console.error("Exp ", expected.toString(), '\nGot ', Array.from(view.slice(0, expected.length)).toString());
+					++failCount;
+				}
+				++totalCount;
+			}
+
+			test = function runChecks()
+			{
+				failCount = totalCount = 0;
+				let caught = false;
+				let ptr1, ptr2, ptr3, ptr4;
+				const begin = [0, 0, 0, 0, 0xFF, 0xFF, 8, 0];
+
+				// list_push
+				reset();
+				let list = cmem.list_push(0, 1);
+				cmem.list_push(list, 2);
+				checkMem(begin.concat(
+				[
+					1, 0, 0, 0, 0, 0, 17, 0,
+					0,
+					2, 0, 0, 0, 8, 0, 0, 0,
+					0, 0,
+				]));
+
+				// malloc
+				// First allocation
+				reset();
+				ptr1 = cmem.malloc(8);
+				check(ptr1 === 16);
+				checkMem(begin.concat([
+					8, 0, 0, 0, 0, 0, 0, 0,
+				]));
+
+				// Another allocation
+				ptr1 = cmem.malloc(8);
+				check(ptr1 === 32);
+
+				// Exact fit
+				cmem.malloc(8);
+				cmem.free(ptr1);
+				ptr2 = cmem.malloc(8)
+				check(ptr1 === ptr2);
+
+				// Just too short
+				cmem.free(ptr1);
+				ptr2 = cmem.malloc(9)
+				check(ptr1 !== ptr2);
+
+				// Gap longer than buffer
+				ptr2 = cmem.malloc(7)
+				check(ptr1 === ptr2);
+
+				// Exhaust page
+				reset();
+				try
+				{
+					cmem.malloc(65535 - 16);
+				} catch
+				{
+					++failCount;
+				}
+				++totalCount;
+
+				// Exceed page
+				reset();
+				try
+				{
+					cmem.malloc(65535 - 15);
+				} catch
+				{
+					caught = true;
+				}
+				++totalCount;
+				if (!caught)
+					++failCount;
+				caught = false;
+
+				// Swiss cheese
+				reset();
+				cmem.malloc(8);
+				cmem.malloc(8);
+				ptr1 = cmem.malloc(6);
+				ptr2 = cmem.malloc(6);
+				cmem.malloc(8);
+				ptr3 = cmem.malloc(32);
+				cmem.malloc(8);
+				cmem.free(ptr1);
+				cmem.free(ptr2);
+				cmem.free(ptr3);
+				ptr4 = cmem.malloc(20);
+				check(ptr1 === ptr4);
+
+				// realloc
+				// Shrink
+				reset();
+				cmem.malloc(32);
+				ptr1 = cmem.malloc(32);
+				cmem.malloc(32);
+				check(ptr1 === cmem.realloc(ptr1, 30));
+				check(cmem.list_get(ptr1 - 8) === 30);
+
+				// Grow behind self
+				reset();
+				cmem.malloc(32);
+				ptr1 = cmem.malloc(32);
+				ptr2 = cmem.malloc(2);
+				cmem.malloc(32);
+				cmem.free(ptr2);
+				check(ptr1 === cmem.realloc(ptr1, 42));
+				check(cmem.list_get(ptr1 - 8) === 42);
+
+				// Grow before self
+				reset();
+				cmem.malloc(32);
+				ptr1 = cmem.malloc(9);
+				ptr2 = cmem.malloc(32);
+				ptr3 = cmem.malloc(2);
+				cmem.malloc(32);
+				cmem.free(ptr1);
+				ptr4 = cmem.malloc(1);
+				cmem.free(ptr3);
+				check(ptr4 === ptr1);
+				ptr2 = cmem.realloc(ptr2, 50)
+				check(ptr2 === ptr1 + 9);
+				check(cmem.list_get(ptr2 - 8) === 50);
+				check(cmem.list_prev(ptr2 - 8) === ptr1 - 8);
+				check(cmem.list_next(ptr2 - 8) === ptr3 + 2);
+
+				// Header won't fit
+				reset();
+				cmem.malloc(32);
+				ptr1 = cmem.malloc(2);
+				ptr2 = cmem.malloc(1);
+				ptr3 = cmem.malloc(32);
+				check(cmem.realloc(ptr1, 1) === ptr1);
+				ptr4 = cmem.realloc(ptr2, 2);
+				check(ptr4 === ptr3 + 32 + 8);
+
+				// Insufficient space before self
+				reset();
+				cmem.malloc(32);
+				ptr1 = cmem.malloc(9);
+				ptr2 = cmem.malloc(1);
+				ptr3 = cmem.malloc(32);
+				cmem.realloc(ptr1, 1);
+				ptr2 = cmem.realloc(ptr2, 10);
+				check(ptr2 === ptr3 + 32 + 8);
+
+				// memset
+				reset(true);
+				cmem.memset(1, 1, 1);
+				cmem.memset(3, 2, 2);
+				checkMem([0, 1, 0, 2, 2, 0, 0]);
+
+				// memcpy
+				cmem.memcpy(6, 1, 1);
+				cmem.memcpy(8, 3, 2);
+				cmem.memcpy(11, 1, 4);
+				checkMem(
+				[
+					0, 1, 0, 2, 2, 0,
+					1,
+					0,
+					2, 2,
+					0,
+					1, 0, 2, 2,
+					0, 0
+				]);
+
+				// memmove
+				// Overlapping at start of dest
+				reset(true);
+				for (let i = 1; i <= 4; ++i) { view[i] = i; }
+				cmem.memmove(1, 0, 2);
+				checkMem([0, 0, 1, 3, 4, 0]);
+
+				// Overlapping at end of dest
+				cmem.memmove(2, 3, 2);
+				checkMem([0, 0, 3, 4, 4, 0]);
+
+				// src before dest without overlap
+				cmem.memmove(4, 2, 2);
+				checkMem([0, 0, 3, 4, 3, 4]);
+
+				// src after dest without overlap
+				cmem.memmove(0, 2, 2);
+				checkMem([3, 4, 3, 4, 3, 4]);
+
+				// end
+				reset();
+				let len = 8;
+				ptr1 = cmem.malloc(8);
+				len += 8 + 8;
+				check(cmem.end() === len);
+				cmem.calloc(4, 2);
+				len += 8 + 4 * 2;
+				check(cmem.end() === len);
+				ptr1 = cmem.realloc(ptr1, 16);
+				len += 8 + 16;
+				check(cmem.end() === len);
+				cmem.malloc(8);
+				check(cmem.end() === len);
+				cmem.free(ptr1);
+				len -= 8 + 16;
+				check(cmem.end() === len);
+
+				console.log(totalCount - failCount, "/", totalCount, "tests succeeded");
+			}
+		})();
+
 		fetch('out/cmem.wasm').then(response =>
 			response.arrayBuffer()
 		).then(buffer =>
 		{
-			cmem = new WebAssembly.Instance(new WebAssembly.Module(buffer)).exports;
+			cmemMod = new WebAssembly.Module(buffer);
+			cmem = new WebAssembly.Instance(cmemMod).exports;
 			console.log("cmem-wasm ready");
-		}, error => console.error(error));
-	</script>
+		}).then(test, error => console.error(error));
+
+	//]]></script>
 </head>
 <body></body>
 </html>
