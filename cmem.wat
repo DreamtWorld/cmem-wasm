@@ -92,7 +92,7 @@
 	;; Memory
 	;; ======
 
-	(func $list_gap (param $list i32) (result i32)
+	(func FUNC(list_gap) (param $list i32) (result i32)
 		(call $list_next (local.get $list))
 		if (result i32)
 			(call $list_next (local.get $list))
@@ -111,12 +111,12 @@
 		loop $iter (result i32)
 			(local.set $gap_len (call $list_gap (local.get $list)))
 			;; Check if header fits
-			(i32.lt_u (local.get $gap_len) (i32.const 8))
+			(i32.ge_u (local.get $gap_len) (i32.const 8))
 			;; Subtract header
 			(local.set $gap_len (i32.sub (local.get $gap_len) (i32.const 8)))
 			;; Check for short gap
 			(i32.ge_u (local.get $gap_len) (local.get $len))
-			i32.or
+			i32.and
 			if
 				;; Check for new best gap
 				(i32.lt_u (local.get $gap_len) (local.get $best_len))
@@ -172,7 +172,7 @@
 	)
 
 	(func FUNC(realloc) (param $list i32) (param $len i32) (result i32) (local $curlen i32) (local $newaddr i32)
-		;; list is actually a buffer for this line
+		;; list still points past header for this line
 		(if (i32.eqz (local.get $list)) (then (return (call $malloc (local.get $len)))))
 		;; Undefined behaviour
 		(if (i32.eqz (local.get $len)) (then unreachable))
@@ -236,7 +236,7 @@
 				(i32.store (i32.add (local.get $addr) (local.get $i)) (local.get $val))
 				(local.set $i (i32.add (local.get $i) (i32.const 4)))
 				;; 8_u loop writes last bytes
-				(br_if $iter (i32.le_u (i32.add (local.get $i) (i32.const 5)) (local.get $len)))
+				(br_if $iter (i32.lt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
 			end
 		end
 		loop $iter
@@ -252,16 +252,18 @@
 		(i32.gt_u (local.get $len) (i32.const 4))
 		if
 			loop $iter
+				(i32.add (local.get $dest) (local.get $i))
 				(i32.load (i32.add (local.get $src) (local.get $i)))
-				(i32.store (i32.add (local.get $dest) (local.get $i)))
+				i32.store
 				(local.set $i (i32.add (local.get $i) (i32.const 4)))
 				;; 8_u loop writes last bytes
-				(br_if $iter (i32.le_u (i32.add (local.get $i) (i32.const 5)) (local.get $len)))
+				(br_if $iter (i32.lt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
 			end
 		end
 		loop $iter
+			(i32.add (local.get $dest) (local.get $i))
 			(i32.load8_u (i32.add (local.get $src) (local.get $i)))
-			(i32.store8 (i32.add (local.get $dest) (local.get $i)))
+			i32.store8
 			(local.set $i (i32.add (local.get $i) (i32.const 1)))
 			(br_if $iter (i32.lt_u (local.get $i) (local.get $len)))
 		end
@@ -276,21 +278,23 @@
 		;; Copy backwards if overlapping with src lesser
 		(i32.lt_u (local.get $src) (local.get $dest))
 		(i32.ge_u (i32.add (local.get $src) (local.get $len)) (local.get $dest))
-		i32.or
+		i32.and
 		if
 			(local.set $i (local.get $len))
 			(i32.gt_u (local.get $len) (i32.const 4))
 			if
 				loop $iter
+					(i32.sub (i32.add (local.get $dest) (local.get $i)) (i32.const 4))
 					(i32.load (i32.sub (i32.add (local.get $src) (local.get $i)) (i32.const 4)))
-					(i32.store (i32.sub (i32.add (local.get $dest) (local.get $i)) (i32.const 4)))
+					i32.store
 					(local.set $i (i32.sub (local.get $i) (i32.const 4)))
 					(br_if $iter (i32.gt_u (local.get $i) (i32.const 4)))
 				end
 			end
 			loop $iter
+				(i32.sub (i32.add (local.get $dest) (local.get $i)) (i32.const 1))
 				(i32.load8_u (i32.sub (i32.add (local.get $src) (local.get $i)) (i32.const 1)))
-				(i32.store8 (i32.sub (i32.add (local.get $dest) (local.get $i)) (i32.const 1)))
+				i32.store8
 				(local.set $i (i32.sub (local.get $i) (i32.const 1)))
 				(br_if $iter (i32.gt_u (local.get $i) (i32.const 0)))
 			end
@@ -303,7 +307,8 @@
 
 	(func EXPORT(init) (param $begin i32)
 		(global.set $begin (local.get $begin))
-		(i32.store16 (i32.add (global.get $begin) (i32.const 4)) (i32.const 0xFFFF))
+		(i32.store (global.get $begin) (i32.const 0))
+		(i32.store (i32.add (global.get $begin) (i32.const 4)) (i32.const 0xFFFF))
 	)
 
 	(func EXPORT(end) (result i32) (local $list i32) (local $next i32)
