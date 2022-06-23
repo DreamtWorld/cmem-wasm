@@ -89,8 +89,10 @@
 
 	(func FUNC(list_rem) (param $list i32) (local $prev i32) (local $next i32)
 		(local.set $prev (call $list_prev (local.get $list)))
-		(local.set $next (call $list_next (local.get $list)))
-		(i32.store16 (i32.add (local.get $next) (i32.const PREV_OFS)) (local.get $prev))
+		(local.tee $next (call $list_next (local.get $list)))
+		if
+			(i32.store16 (i32.add (local.get $next) (i32.const PREV_OFS)) (local.get $prev))
+		end
 		(i32.store16 (i32.add (local.get $prev) (i32.const NEXT_OFS)) (local.get $next))
 	)
 
@@ -176,8 +178,7 @@
 		call $list_rem
 		(i32.eq (local.get $addr) (global.get $last))
 		if
-			(i32.load (i32.add (local.get $addr) (i32.const PREV_OFS)))
-			global.set $last
+			(global.set $last (call $list_prev (local.get $addr)))
 		end
 	)
 
