@@ -46,7 +46,7 @@
 				failCount = totalCount = 0;
 				let caught = false;
 				let ptr1, ptr2, ptr3, ptr4;
-				const begin = [0, 0, 0, 0, 0xFF, 0xFF, 8, 0];
+				const begin = [0, 0, 0xFF, 0xFF, 6, 0];
 
 				// list_push
 				reset();
@@ -54,9 +54,9 @@
 				cmem.list_push(list, 2);
 				checkMem(begin.concat(
 				[
-					1, 0, 0, 0, 0, 0, 17, 0,
+					1, 0, 0, 0, 13, 0,
 					0,
-					2, 0, 0, 0, 8, 0, 0, 0,
+					2, 0, 6, 0, 0, 0,
 					0, 0,
 				]));
 
@@ -64,14 +64,14 @@
 				// First allocation
 				reset();
 				ptr1 = cmem.malloc(8);
-				check(ptr1 === 16);
+				check(ptr1 === 12);
 				checkMem(begin.concat([
-					8, 0, 0, 0, 0, 0, 0, 0,
+					8, 0, 0, 0, 0, 0,
 				]));
 
 				// Another allocation
 				ptr1 = cmem.malloc(8);
-				check(ptr1 === 32);
+				check(ptr1 === 26);
 
 				// Exact fit
 				cmem.malloc(8);
@@ -92,7 +92,7 @@
 				reset();
 				try
 				{
-					cmem.malloc(65535 - 16);
+					cmem.malloc(65535 - 12);
 				} catch
 				{
 					++failCount;
@@ -103,7 +103,7 @@
 				reset();
 				try
 				{
-					cmem.malloc(65535 - 15);
+					cmem.malloc(65535 - 11);
 				} catch
 				{
 					caught = true;
@@ -125,7 +125,7 @@
 				cmem.free(ptr1);
 				cmem.free(ptr2);
 				cmem.free(ptr3);
-				ptr4 = cmem.malloc(20);
+				ptr4 = cmem.malloc(18);
 				check(ptr1 === ptr4);
 
 				// realloc
@@ -135,7 +135,7 @@
 				ptr1 = cmem.malloc(32);
 				cmem.malloc(32);
 				check(ptr1 === cmem.realloc(ptr1, 30));
-				check(cmem.list_get(ptr1 - 8) === 30);
+				check(cmem.list_get(ptr1 - 6) === 30);
 
 				// Grow behind self
 				reset();
@@ -144,8 +144,8 @@
 				ptr2 = cmem.malloc(2);
 				cmem.malloc(32);
 				cmem.free(ptr2);
-				check(ptr1 === cmem.realloc(ptr1, 42));
-				check(cmem.list_get(ptr1 - 8) === 42);
+				check(ptr1 === cmem.realloc(ptr1, 40));
+				check(cmem.list_get(ptr1 - 6) === 40);
 
 				// Grow before self
 				reset();
@@ -158,11 +158,11 @@
 				ptr4 = cmem.malloc(1);
 				cmem.free(ptr3);
 				check(ptr4 === ptr1);
-				ptr2 = cmem.realloc(ptr2, 50)
-				check(ptr2 === ptr1 + 9);
-				check(cmem.list_get(ptr2 - 8) === 50);
-				check(cmem.list_prev(ptr2 - 8) === ptr1 - 8);
-				check(cmem.list_next(ptr2 - 8) === ptr3 + 2);
+				ptr2 = cmem.realloc(ptr2, 48)
+				check(ptr2 === ptr1 + 7);
+				check(cmem.list_get(ptr2 - 6) === 48);
+				check(cmem.list_prev(ptr2 - 6) === ptr1 - 6);
+				check(cmem.list_next(ptr2 - 6) === ptr3 + 2);
 
 				// Header won't fit
 				reset();
@@ -172,7 +172,7 @@
 				ptr3 = cmem.malloc(32);
 				check(cmem.realloc(ptr1, 1) === ptr1);
 				ptr4 = cmem.realloc(ptr2, 2);
-				check(ptr4 === ptr3 + 32 + 8);
+				check(ptr4 === ptr3 + 32 + 6);
 
 				// Insufficient space before self
 				reset();
@@ -182,7 +182,7 @@
 				ptr3 = cmem.malloc(32);
 				cmem.realloc(ptr1, 1);
 				ptr2 = cmem.realloc(ptr2, 10);
-				check(ptr2 === ptr3 + 32 + 8);
+				check(ptr2 === ptr3 + 32 + 6);
 
 				// memset
 				reset(true);
@@ -226,33 +226,33 @@
 
 				// end
 				reset();
-				let len = 8;
+				let len = 6;
 				check(cmem.end() === len);
 				ptr1 = cmem.malloc(8);
-				len += 8 + 8;
+				len += 6 + 8;
 				check(cmem.end() === len);
 				cmem.calloc(4, 2);
-				len += 8 + 4 * 2;
+				len += 6 + 4 * 2;
 				check(cmem.end() === len);
 				ptr1 = cmem.realloc(ptr1, 16);
-				len += 8 + 16;
+				len += 6 + 16;
 				check(cmem.end() === len);
 				cmem.malloc(8);
 				check(cmem.end() === len);
 				cmem.free(ptr1);
-				len -= 8 + 16;
+				len -= 6 + 16;
 				check(cmem.end() === len);
 
 				reset();
 				ptr1 = cmem.malloc(8);
 				ptr2 = cmem.malloc(8);
 				cmem.malloc(8);
-				check(cmem.end() === 56)
+				check(cmem.end() === 48)
 				cmem.free(ptr1);
-				cmem.realloc(ptr2, 24);
-				check(cmem.end() === 56)
-				cmem.realloc(ptr2, 32);
-				check(cmem.end() === 96)
+				cmem.realloc(ptr2, 22);
+				check(cmem.end() === 48)
+				cmem.realloc(ptr2, 23);
+				check(cmem.end() === 77)
 
 				console.log(totalCount - failCount, "/", totalCount, "tests succeeded");
 			}

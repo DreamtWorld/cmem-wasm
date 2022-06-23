@@ -36,6 +36,10 @@
 #define FUNC(F) $##F
 #endif
 
+#define PREV_OFS 2
+#define NEXT_OFS 4
+#define HEAD_LEN 6
+
 (module
 
 	(memory (export "memory") 1)
@@ -44,22 +48,22 @@
 
 	;; List
 	;; ====
-	;; 16 bits length, 16 bits unused, 16 bits address of previous list, 16 bits address of next list
+	;; 16 bits buffer length, 16 bits address of previous list, 16 bits address of next list
 
 	(func FUNC(list_next) (param $list i32) (result i32)
-		(i32.load16_u (i32.add (local.get $list) (i32.const 6)))
+		(i32.load16_u (i32.add (local.get $list) (i32.const NEXT_OFS)))
 	)
 
 	(func FUNC(list_prev) (param $list i32) (result i32)
-		(i32.load16_u (i32.add (local.get $list) (i32.const 4)))
+		(i32.load16_u (i32.add (local.get $list) (i32.const PREV_OFS)))
 	)
 
 	(func FUNC(list_get) (param $list i32) (result i32)
-		(i32.load (local.get $list))
+		(i32.load16_u (local.get $list))
 	)
 
 	(func FUNC(list_set) (param $list i32) (param $new i32)
-		(i32.store (local.get $list) (local.get $new))
+		(i32.store16 (local.get $list) (local.get $new))
 	)
 
 	(func FUNC(list_push) (param $list i32) (param $val i32) (result i32) (local $next i32) (local $addr i32)
@@ -68,26 +72,26 @@
 		;; Determine address for new segment
 		(local.set $addr (i32.add (i32.add
 			(local.get $list) ;; begin
-			(i32.const 8)) ;; head
+			(i32.const HEAD_LEN)) ;; head
 			(call $list_get (local.get $list))) ;; body
 		)
 		;; Insert new segment
-		(i32.store (local.get $addr) (local.get $val))
+		(i32.store16 (local.get $addr) (local.get $val))
 		;; Store addresses
 		(if (local.get $next)
-			(then (i32.store16 (i32.add (local.get $next) (i32.const 4)) (local.get $addr)))
+			(then (i32.store16 (i32.add (local.get $next) (i32.const PREV_OFS)) (local.get $addr)))
 		)
-		(i32.store16 (i32.add (local.get $list) (i32.const 6)) (local.get $addr))
-		(i32.store16 (i32.add (local.get $addr) (i32.const 4)) (local.get $list))
-		(i32.store16 (i32.add (local.get $addr) (i32.const 6)) (local.get $next))
+		(i32.store16 (i32.add (local.get $list) (i32.const NEXT_OFS)) (local.get $addr))
+		(i32.store16 (i32.add (local.get $addr) (i32.const PREV_OFS)) (local.get $list))
+		(i32.store16 (i32.add (local.get $addr) (i32.const NEXT_OFS)) (local.get $next))
 		local.get $addr
 	)
 
 	(func FUNC(list_rem) (param $list i32) (local $prev i32) (local $next i32)
 		(local.set $prev (call $list_prev (local.get $list)))
 		(local.set $next (call $list_next (local.get $list)))
-		(i32.store16 (i32.add (local.get $next) (i32.const 4)) (local.get $prev))
-		(i32.store16 (i32.add (local.get $prev) (i32.const 6)) (local.get $next))
+		(i32.store16 (i32.add (local.get $next) (i32.const PREV_OFS)) (local.get $prev))
+		(i32.store16 (i32.add (local.get $prev) (i32.const NEXT_OFS)) (local.get $next))
 	)
 
 	;; Memory
@@ -100,7 +104,7 @@
 		else
 			i32.const 0xFFFF
 		end
-		(i32.add (i32.add (local.get $list) (i32.const 8)) (call $list_get (local.get $list)))
+		(i32.add (i32.add (local.get $list) (i32.const HEAD_LEN)) (call $list_get (local.get $list)))
 		i32.sub
 	)
 
@@ -112,9 +116,9 @@
 		loop $iter
 			(local.set $gap_len (call $list_gap (local.get $list)))
 			;; Check if header fits
-			(i32.ge_u (local.get $gap_len) (i32.const 8))
+			(i32.ge_u (local.get $gap_len) (i32.const HEAD_LEN))
 			;; Subtract header
-			(local.set $gap_len (i32.sub (local.get $gap_len) (i32.const 8)))
+			(local.set $gap_len (i32.sub (local.get $gap_len) (i32.const 6)))
 			;; Check for short gap
 			(i32.ge_u (local.get $gap_len) (local.get $len))
 			i32.and
@@ -137,7 +141,7 @@
 				if
 					;; Determine past-the-end address
 					local.get $list
-					i32.const 16 ;; 2 heads
+					i32.const 12 ;; 2 HEAD_LEN
 					(call $list_get (local.get $list))
 					local.get $len
 					;; Give up if buffer doesn't fit into page
@@ -157,7 +161,7 @@
 				br $iter
 			end
 		end
-		(i32.add (local.get $list) (i32.const 8))
+		(i32.add (local.get $list) (i32.const HEAD_LEN))
 	)
 
 	(func FUNC(calloc) (param $count i32) (param $len i32) (result i32) (local $addr i32)
@@ -175,11 +179,11 @@
 
 	(func FUNC(free) (param $addr i32)
 		(if (i32.eqz (local.get $addr)) (then return))
-		(local.tee $addr (i32.sub (local.get $addr) (i32.const 8)))
+		(local.tee $addr (i32.sub (local.get $addr) (i32.const HEAD_LEN)))
 		call $list_rem
 		(i32.eq (local.get $addr) (global.get $last))
 		if
-			(i32.load (i32.add (local.get $addr) (i32.const 4)))
+			(i32.load (i32.add (local.get $addr) (i32.const PREV_OFS)))
 			global.set $last
 		end
 	)
@@ -190,7 +194,7 @@
 		;; Undefined behaviour
 		(if (i32.eqz (local.get $len)) (then unreachable))
 		;; Access list header
-		(local.set $list (i32.sub (local.get $list) (i32.const 8)))
+		(local.set $list (i32.sub (local.get $list) (i32.const HEAD_LEN)))
 		(local.set $curlen (call $list_get (local.get $list)))
 
 		;; Check for sufficient space with following gap
@@ -199,7 +203,7 @@
 		i32.ge_u
 		if (result i32)
 			(call $list_set (local.get $list) (local.get $len))
-			(i32.add (local.get $list) (i32.const 8))
+			(i32.add (local.get $list) (i32.const HEAD_LEN))
 		else
 			;; Check for sufficient space before and after
 			(i32.add (i32.add
@@ -210,15 +214,15 @@
 			(local.get $len)
 			i32.ge_u
 			;; Check if header fits
-			(i32.ge_u (call $list_gap (call $list_prev (local.get $list))) (i32.const 8))
+			(i32.ge_u (call $list_gap (call $list_prev (local.get $list))) (i32.const HEAD_LEN))
 			i32.and
 			if (result i32)
 				(call $list_push (call $list_prev (local.get $list)) (local.get $len))
 				(call $list_rem (local.get $list))
 				(call $memmove
 					;; Add to list_push result
-					(local.tee $newaddr (i32.add (i32.const 8)))
-					(i32.add (local.get $list) (i32.const 8))
+					(local.tee $newaddr (i32.add (i32.const HEAD_LEN)))
+					(i32.add (local.get $list) (i32.const HEAD_LEN))
 					(local.get $curlen)
 				)
 				drop
@@ -229,8 +233,8 @@
 				local.get $newaddr
 			else
 				(call $malloc (local.get $len))
-				(call $free (i32.add (local.get $list) (i32.const 8)))
-				(i32.add (local.get $list) (i32.const 8))
+				(call $free (i32.add (local.get $list) (i32.const HEAD_LEN)))
+				(i32.add (local.get $list) (i32.const HEAD_LEN))
 				local.get $curlen
 				call $memmove
 			end
@@ -324,13 +328,13 @@
 
 	(func EXPORT(init) (param $begin i32)
 		(global.set $begin (local.get $begin))
-		(i32.store (global.get $begin) (i32.const 0))
-		(i32.store (i32.add (global.get $begin) (i32.const 4)) (i32.const 0xFFFF))
+		(i32.store16 (global.get $begin) (i32.const 0))
+		(i32.store16 (i32.add (global.get $begin) (i32.const PREV_OFS)) (i32.const 0xFFFF))
 	)
 
 	(func EXPORT(end) (result i32)
 		global.get $last
-		i32.const 8
+		i32.const HEAD_LEN
 		(call $list_get (global.get $last))
 		(i32.add (i32.add))
 	)
