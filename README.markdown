@@ -28,7 +28,7 @@ Additional functionality
 Build
 -----
 
-`build.sh` runs the source code through the C language preprocessor, then compiles it with `wat2wasm` from the *wabt* software package.
+`build.sh` runs the source code through the C language preprocessor, then translates it with `wat2wasm` from the *wabt* software package.
 
 The result is an object file that can be linked using `wasm-ld`, as well as a WebAssembly module.
 

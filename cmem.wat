@@ -250,7 +250,7 @@
 			loop $iter
 				(i32.store (i32.add (local.get $addr) (local.get $i)) (local.get $val))
 				(local.set $i (i32.add (local.get $i) (i32.const 4)))
-				;; 8_u loop writes last bytes
+				;; store8 loop writes last bytes
 				(br_if $iter (i32.lt_u (i32.add (local.get $i) (i32.const 4)) (local.get $len)))
 			end
 		end
