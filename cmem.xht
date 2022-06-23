@@ -164,15 +164,28 @@
 				check(cmem.list_prev(ptr2 - 6) === ptr1 - 6);
 				check(cmem.list_next(ptr2 - 6) === ptr3 + 2);
 
-				// Header won't fit
+				// Overlapping heads
 				reset();
-				cmem.malloc(32);
+				cmem.malloc(1);
 				ptr1 = cmem.malloc(2);
 				ptr2 = cmem.malloc(1);
-				ptr3 = cmem.malloc(32);
+				ptr3 = cmem.malloc(1);
+				view[ptr2] = 2;
 				check(cmem.realloc(ptr1, 1) === ptr1);
 				ptr4 = cmem.realloc(ptr2, 2);
-				check(ptr4 === ptr3 + 32 + 6);
+				check(ptr4 === ptr1 + 1 + 6);
+				checkMem(begin.concat(
+				[
+					1, 0, 0, 0, 13, 0,
+					0,
+					1, 0, 6, 0, 20, 0,
+					0,
+					2, 0, 13, 0, 28, 0,
+					2, 2,
+					1, 0, 20, 0, 0, 0,
+					0,
+					0,
+				]));
 
 				// Insufficient space before self
 				reset();

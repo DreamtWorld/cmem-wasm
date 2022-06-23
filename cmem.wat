@@ -206,12 +206,10 @@
 			)
 			(local.get $len)
 			i32.ge_u
-			;; Check if header fits
-			(i32.ge_u (call $list_gap (call $list_prev (local.get $list))) (i32.const HEAD_LEN))
-			i32.and
 			if (result i32)
-				(call $list_push (call $list_prev (local.get $list)) (local.get $len))
+				;; list_rem won' modify $list, allowing usage with overlapping heads
 				(call $list_rem (local.get $list))
+				(call $list_push (call $list_prev (local.get $list)) (local.get $len))
 				(call $memmove
 					;; Add to list_push result
 					(local.tee $newaddr (i32.add (i32.const HEAD_LEN)))
