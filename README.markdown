@@ -39,6 +39,7 @@ Build options
 
 - `EXPORT_ALL` exports functions other than `init` and `end`, including memory and list management functions.
 - `EXPORT_PREFIX` sets a prefix for all exported functions names, `cmem_` by default.
+- `FIRST_FIT` employs a first-fit instead of a best-fit strategy for allocation.
 - `BULK_MEMORY_ENABLED` enables use of bulk memory instructions, decreasing embedder compatibility.
 
 Build dependencies

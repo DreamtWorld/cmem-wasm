@@ -135,7 +135,11 @@
 
 			;; Iterate
 			(i32.eqz (call $list_next (local.get $list)))
+#ifdef FIRST_FIT
+			(i32.ne (local.get $best_len) (i32.const 0xFFFF))
+#else
 			(i32.eq (local.get $best_len) (local.get $len))
+#endif
 			i32.or
 			if
 				;; Grow memory if necessary

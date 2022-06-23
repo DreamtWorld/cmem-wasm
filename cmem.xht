@@ -88,6 +88,17 @@
 				ptr2 = cmem.malloc(7)
 				check(ptr1 === ptr2);
 
+				// Best fit
+				reset();
+				ptr1 = cmem.malloc(2); // 6 0, 2, 6 1, 1,
+				cmem.malloc(1);
+				ptr2 = cmem.malloc(1);
+				cmem.malloc(1);
+				cmem.free(ptr1);
+				cmem.free(ptr2);
+				ptr3 = cmem.malloc(1);
+				check(ptr2 === ptr3);
+
 				// Exhaust page
 				reset();
 				try
