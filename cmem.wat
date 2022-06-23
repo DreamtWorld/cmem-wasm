@@ -166,14 +166,7 @@
 
 	(func FUNC(calloc) (param $count i32) (param $len i32) (result i32) (local $addr i32)
 		(local.set $addr (call $malloc (i32.mul (local.get $count) (local.get $len))))
-#ifdef BULK_MEMORY_ENABLED
-		(memory.fill
-#else
-		(call $memset
-#endif
-			(local.get $addr)
-			(i32.const 0)
-			(local.get $len)
+		(call $memset (local.get $addr) (i32.const 0) (local.get $len)
 		)
 	)
 
@@ -243,6 +236,9 @@
 
 	(func FUNC(memset) (param $addr i32) (param $val i32) (param $len i32) (result i32) (local $i i32)
 		(if (i32.eqz (local.get $len)) (then (return (local.get $addr))))
+#ifdef BULK_MEMORY_ENABLED
+		(memory.fill (local.get $addr) (local.get $val) (local.get $len))
+#else
 		(i32.gt_u (local.get $len) (i32.const 4))
 		if
 			(local.set $val
@@ -265,11 +261,15 @@
 			(local.set $i (i32.add (local.get $i) (i32.const 1)))
 			(br_if $iter (i32.lt_u (local.get $i) (local.get $len)))
 		end
+#endif
 		(local.get $addr)
 	)
 
 	(func FUNC(memcpy) (param $dest i32) (param $src i32) (param $len i32) (result i32) (local $i i32)
 		(if (i32.eqz (local.get $len)) (then (return (local.get $dest))))
+#ifdef BULK_MEMORY_ENABLED
+		(memory.copy (local.get $dest) (local.get $src) (local.get $len))
+#else
 		(i32.gt_u (local.get $len) (i32.const 4))
 		if
 			loop $iter
@@ -288,6 +288,7 @@
 			(local.set $i (i32.add (local.get $i) (i32.const 1)))
 			(br_if $iter (i32.lt_u (local.get $i) (local.get $len)))
 		end
+#endif
 		(local.get $dest)
 	)
 
@@ -296,6 +297,9 @@
 		(i32.eqz (local.get $len))
 		(if (i32.or) (then (return (local.get $dest))))
 
+#ifdef BULK_MEMORY_ENABLED
+		(memory.copy (local.get $dest) (local.get $src) (local.get $len))
+#else
 		;; Copy backwards if overlapping with src lesser
 		(i32.lt_u (local.get $src) (local.get $dest))
 		(i32.ge_u (i32.add (local.get $src) (local.get $len)) (local.get $dest))
@@ -323,6 +327,7 @@
 			(call $memcpy (local.get $dest) (local.get $src) (local.get $len))
 			drop
 		end
+#endif
 		local.get $dest
 	)
 
