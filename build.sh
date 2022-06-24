@@ -10,7 +10,7 @@ FEATURES="--disable-mutable-globals \
 
 if [ "$1" == --bulk-memory ]; then
 	OPTFLAGS=--enable-bulk-memory
-	CPPFLAGS=-DBULK_MEMORY_ENABLED
+	CPPFLAGS=-DBULK_MEMORY
 else
 	FEATURES="$FEATURES --disable-bulk-memory"
 fi

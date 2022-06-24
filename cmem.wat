@@ -239,7 +239,7 @@
 
 	(func FUNC(memset) (param $addr i32) (param $val i32) (param $len i32) (result i32) (local $i i32)
 		(if (i32.eqz (local.get $len)) (then (return (local.get $addr))))
-#ifdef BULK_MEMORY_ENABLED
+#ifdef BULK_MEMORY
 		(memory.fill (local.get $addr) (local.get $val) (local.get $len))
 #else
 		(i32.gt_u (local.get $len) (i32.const 4))
@@ -270,7 +270,7 @@
 
 	(func FUNC(memcpy) (param $dest i32) (param $src i32) (param $len i32) (result i32) (local $i i32)
 		(if (i32.eqz (local.get $len)) (then (return (local.get $dest))))
-#ifdef BULK_MEMORY_ENABLED
+#ifdef BULK_MEMORY
 		(memory.copy (local.get $dest) (local.get $src) (local.get $len))
 #else
 		(i32.gt_u (local.get $len) (i32.const 4))
@@ -300,7 +300,7 @@
 		(i32.eqz (local.get $len))
 		(if (i32.or) (then (return (local.get $dest))))
 
-#ifdef BULK_MEMORY_ENABLED
+#ifdef BULK_MEMORY
 		(memory.copy (local.get $dest) (local.get $src) (local.get $len))
 #else
 		;; Copy backwards if overlapping with src lesser
