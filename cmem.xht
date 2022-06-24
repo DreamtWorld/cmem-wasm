@@ -14,7 +14,7 @@
 		{
 			cmem = new WebAssembly.Instance(cmemMod).exports
 			view = new Uint8Array(cmem.memory.buffer);
-			if (!skipInit) cmem.init(0);
+			if (!skipInit) cmem.cmem_init(0);
 		}
 
 		(() => {
@@ -50,8 +50,8 @@
 
 				// list_push
 				reset();
-				let list = cmem.list_push(0, 1);
-				cmem.list_push(list, 2);
+				let list = cmem.cmem_list_push(0, 1);
+				cmem.cmem_list_push(list, 2);
 				checkMem(begin.concat(
 				[
 					1, 0, 0, 0, 13, 0,
@@ -146,7 +146,7 @@
 				ptr1 = cmem.malloc(32);
 				cmem.malloc(32);
 				check(ptr1 === cmem.realloc(ptr1, 30));
-				check(cmem.list_get(ptr1 - 6) === 30);
+				check(cmem.cmem_list_get(ptr1 - 6) === 30);
 
 				// Grow behind self
 				reset();
@@ -156,7 +156,7 @@
 				cmem.malloc(32);
 				cmem.free(ptr2);
 				check(ptr1 === cmem.realloc(ptr1, 40));
-				check(cmem.list_get(ptr1 - 6) === 40);
+				check(cmem.cmem_list_get(ptr1 - 6) === 40);
 
 				// Grow before self
 				reset();
@@ -171,9 +171,9 @@
 				check(ptr4 === ptr1);
 				ptr2 = cmem.realloc(ptr2, 48)
 				check(ptr2 === ptr1 + 7);
-				check(cmem.list_get(ptr2 - 6) === 48);
-				check(cmem.list_prev(ptr2 - 6) === ptr1 - 6);
-				check(cmem.list_next(ptr2 - 6) === ptr3 + 2);
+				check(cmem.cmem_list_get(ptr2 - 6) === 48);
+				check(cmem.cmem_list_prev(ptr2 - 6) === ptr1 - 6);
+				check(cmem.cmem_list_next(ptr2 - 6) === ptr3 + 2);
 
 				// Overlapping heads
 				reset();
@@ -251,32 +251,32 @@
 				// end
 				reset();
 				let len = 6;
-				check(cmem.end() === len);
+				check(cmem.cmem_end() === len);
 				ptr1 = cmem.malloc(8);
 				len += 6 + 8;
-				check(cmem.end() === len);
+				check(cmem.cmem_end() === len);
 				cmem.calloc(4, 2);
 				len += 6 + 4 * 2;
-				check(cmem.end() === len);
+				check(cmem.cmem_end() === len);
 				ptr1 = cmem.realloc(ptr1, 16);
 				len += 6 + 16;
-				check(cmem.end() === len);
+				check(cmem.cmem_end() === len);
 				cmem.malloc(8);
-				check(cmem.end() === len);
+				check(cmem.cmem_end() === len);
 				cmem.free(ptr1);
 				len -= 6 + 16;
-				check(cmem.end() === len);
+				check(cmem.cmem_end() === len);
 
 				reset();
 				ptr1 = cmem.malloc(8);
 				ptr2 = cmem.malloc(8);
 				cmem.malloc(8);
-				check(cmem.end() === 48)
+				check(cmem.cmem_end() === 48)
 				cmem.free(ptr1);
 				cmem.realloc(ptr2, 22);
-				check(cmem.end() === 48)
+				check(cmem.cmem_end() === 48)
 				cmem.realloc(ptr2, 23);
-				check(cmem.end() === 77)
+				check(cmem.cmem_end() === 77)
 
 				console.log(totalCount - failCount, "/", totalCount, "tests succeeded");
 			}

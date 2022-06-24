@@ -18,12 +18,12 @@ Available libc functions
 Usage
 -----
 
-Initialize memory with `init(start)`, where `start` is the 16 bit address of the first byte of the memory region to use. Proceed to use memory allocation functions as usual. Exceeding available memory will trap.
+Initialize memory with `cmem_init(start)`, where `start` is the 16 bit address of the first byte of the memory region to use. Proceed to use memory allocation functions as usual. Exceeding available memory will trap.
 
 Additional functionality
 ------------------------
 
-`end()` returns a past-the-end pointer to the last buffer in memory, effectively retrieving the current length of memory. Intended use is backing up memory states at minimal size.
+`cmem_end()` returns a past-the-end pointer to the last buffer in memory, effectively retrieving the current length of memory. Intended use is backing up memory states at minimal size.
 
 Build
 -----
@@ -37,8 +37,8 @@ The script also produces an optimized module using `wasm-opt -O3` from the *bina
 Build options
 -------------
 
-- `EXPORT_ALL` exports functions other than `init` and `end`, including memory and list management functions.
-- `EXPORT_PREFIX` sets a prefix for all exported functions names, `cmem_` by default.
+- `EXPORT_ALL` exports functions other than `cmem_init` and `cmem_end`, including memory and list management functions.
+- `PREFIX_LIBC` prepends `cmem_` to libc function names.
 - `FIRST_FIT` employs a first-fit instead of a best-fit strategy for allocation.
 - `BULK_MEMORY` enables use of bulk memory instructions, decreasing embedder compatibility.
 
