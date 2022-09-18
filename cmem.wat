@@ -46,7 +46,12 @@
 
 (module
 
-	(memory (export "memory") 1)
+	(memory
+#ifdef EXPORT_ALL
+		(export "memory")
+#endif
+	1)
+
 	(global $cmem_begin (mut i32) (i32.const 0))
 	(global $cmem_last (mut i32) (i32.const 0))
 

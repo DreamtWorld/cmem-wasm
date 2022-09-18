@@ -37,7 +37,7 @@ The script also produces an optimized module using `wasm-opt -O3` from the *bina
 Build options
 -------------
 
-- `EXPORT_ALL` exports functions other than `cmem_init` and `cmem_end`, including memory and list management functions.
+- `EXPORT_ALL` exports the memory and functions other than `cmem_init` and `cmem_end`, including memory and list management functions.
 - `PREFIX_LIBC` prepends `cmem_` to libc function names.
 - `FIRST_FIT` employs a first-fit instead of a best-fit strategy for allocation.
 - `BULK_MEMORY` enables use of bulk memory instructions, decreasing embedder compatibility.
