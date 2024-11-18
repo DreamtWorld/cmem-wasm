@@ -98,6 +98,7 @@
 		local.get $addr
 	)
 
+	;; postcondition: $list is unchanged
 	(func FUNC(list_rem) (param $list i32)
 		(local $prev i32)
 		(local $next i32)
