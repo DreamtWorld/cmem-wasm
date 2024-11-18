@@ -75,7 +75,9 @@
 		(i32.store16 (local.get $list) (local.get $new))
 	)
 
-	(func FUNC(list_push) (param $list i32) (param $val i32) (result i32) (local $next i32) (local $addr i32)
+	(func FUNC(list_push) (param $list i32) (param $val i32) (result i32)
+		(local $next i32)
+		(local $addr i32)
 		;; Retrieve address of next segment
 		(local.set $next (call $cmem_list_next (local.get $list)))
 		;; Determine address for new segment
@@ -96,7 +98,9 @@
 		local.get $addr
 	)
 
-	(func FUNC(list_rem) (param $list i32) (local $prev i32) (local $next i32)
+	(func FUNC(list_rem) (param $list i32)
+		(local $prev i32)
+		(local $next i32)
 		(local.set $prev (call $cmem_list_prev (local.get $list)))
 		(local.tee $next (call $cmem_list_next (local.get $list)))
 		if
@@ -119,7 +123,11 @@
 		i32.sub
 	)
 
-	(func FUNCLIBC(malloc) (param $len i32) (result i32) (local $list i32) (local $gap_len i32) (local $best_prev i32) (local $best_len i32)
+	(func FUNCLIBC(malloc) (param $len i32) (result i32)
+		(local $list i32)
+		(local $gap_len i32)
+		(local $best_prev i32)
+		(local $best_len i32)
 
 		(local.set $list (global.get $cmem_begin))
 		(local.set $best_prev (local.tee $best_len (i32.const 0xFFFF)))
@@ -179,7 +187,8 @@
 		(i32.add (local.get $list) (i32.const HEAD_LEN))
 	)
 
-	(func FUNCLIBC(calloc) (param $count i32) (param $len i32) (result i32) (local $addr i32)
+	(func FUNCLIBC(calloc) (param $count i32) (param $len i32) (result i32)
+		(local $addr i32)
 		(local.set $addr (call F(malloc) (i32.mul (local.get $count) (local.get $len))))
 		(call F(memset) (local.get $addr) (i32.const 0) (local.get $len)
 		)
@@ -195,7 +204,9 @@
 		end
 	)
 
-	(func FUNCLIBC(realloc) (param $list i32) (param $len i32) (result i32) (local $curlen i32) (local $newaddr i32)
+	(func FUNCLIBC(realloc) (param $list i32) (param $len i32) (result i32)
+		(local $curlen i32)
+		(local $newaddr i32)
 		;; list still points past header for this line
 		(if (i32.eqz (local.get $list)) (then (return (call F(malloc) (local.get $len)))))
 		;; Undefined behaviour
@@ -246,7 +257,8 @@
 		end
 	)
 
-	(func FUNCLIBC(memset) (param $addr i32) (param $val i32) (param $len i32) (result i32) (local $i i32)
+	(func FUNCLIBC(memset) (param $addr i32) (param $val i32) (param $len i32) (result i32)
+		(local $i i32)
 		(if (i32.eqz (local.get $len)) (then (return (local.get $addr))))
 #ifdef BULK_MEMORY
 		(memory.fill (local.get $addr) (local.get $val) (local.get $len))
@@ -277,7 +289,8 @@
 		(local.get $addr)
 	)
 
-	(func FUNCLIBC(memcpy) (param $dest i32) (param $src i32) (param $len i32) (result i32) (local $i i32)
+	(func FUNCLIBC(memcpy) (param $dest i32) (param $src i32) (param $len i32) (result i32)
+		(local $i i32)
 		(if (i32.eqz (local.get $len)) (then (return (local.get $dest))))
 #ifdef BULK_MEMORY
 		(memory.copy (local.get $dest) (local.get $src) (local.get $len))
@@ -304,7 +317,8 @@
 		(local.get $dest)
 	)
 
-	(func FUNCLIBC(memmove) (param $dest i32) (param $src i32) (param $len i32) (result i32) (local $i i32)
+	(func FUNCLIBC(memmove) (param $dest i32) (param $src i32) (param $len i32) (result i32)
+		(local $i i32)
 		(i32.eq (local.get $src) (local.get $dest))
 		(i32.eqz (local.get $len))
 		(if (i32.or) (then (return (local.get $dest))))
