@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -e
+cd $(dirname $0)
+
 mkdir -p out
 FEATURES="--disable-mutable-globals \
 --disable-saturating-float-to-int \
