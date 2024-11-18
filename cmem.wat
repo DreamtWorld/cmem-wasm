@@ -164,7 +164,7 @@
 				if
 					;; Determine past-the-end address
 					local.get $list
-					i32.const 12 ;; 2 HEAD_LEN
+					(i32.mul (i32.const HEAD_LEN) (i32.const 2))
 					(call $cmem_list_get (local.get $list))
 					local.get $len
 					;; Give up if buffer doesn't fit into page
