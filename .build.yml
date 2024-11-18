@@ -1,0 +1,11 @@
+image: alpine/edge
+packages:
+  - wabt
+  - binaryen
+sources:
+  - https://git.sr.ht/~lk/cmem-wasm
+tasks:
+  - build: cmem-wasm/build.sh
+artifacts:
+  - cmem-wasm/out/cmem.o
+  - cmem-wasm/out/cmem.O3.wasm

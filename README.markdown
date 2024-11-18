@@ -1,6 +1,8 @@
 cmem-wasm
 =========
 
+[![builds.sr.ht status](https://builds.sr.ht/~lk/cmem-wasm.svg)](https://builds.sr.ht/~lk/cmem-wasm?)
+
 This library implements libc memory allocation functions in WebAssembly.
 The implementation assumes a single page of memory, that is, a 64 KiB buffer.
 
